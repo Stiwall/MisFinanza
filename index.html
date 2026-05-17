@@ -14,6 +14,9 @@
 <link rel="icon" type="image/png" href="icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <style>
 :root {
   --bg:#08090f; --surface:#0f1117; --surface2:#161820; --surface3:#1d1f2a;
@@ -181,9 +184,49 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
 .promo-name{font-size:14px;font-weight:700;color:#ff7c2a}
 .promo-desc{font-size:11px;color:var(--text-muted);margin-top:2px}
 .promo-arrow{color:#ff7c2a;font-size:18px;flex-shrink:0}
+
+/* LOGIN SCREEN */
+.login-screen{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--pad)}
+.login-screen.hidden{display:none}
+.login-logo{margin-bottom:28px;text-align:center}
+.login-logo img{width:80px;height:80px;border-radius:24px;box-shadow:0 8px 32px var(--accent-glow)}
+.login-logo h1{font-size:26px;font-weight:800;margin-top:14px;letter-spacing:-.5px}
+.login-logo h1 span{color:var(--accent)}
+.login-logo p{font-size:13px;color:var(--text-muted);margin-top:4px}
+.login-card{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:28px 24px}
+.login-card h2{font-size:17px;font-weight:700;margin-bottom:6px}
+.login-card p{font-size:12px;color:var(--text-muted);margin-bottom:24px}
+.btn-google{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:14px;background:var(--surface2);border:1.5px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:15px;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-google:hover{border-color:var(--accent);box-shadow:0 0 20px var(--accent-glow)}
+.btn-google svg{width:22px;height:22px;flex-shrink:0}
+.login-footer{margin-top:20px;font-size:11px;color:var(--text-muted);text-align:center;line-height:1.6}
+/* USER AVATAR */
+.user-avatar{width:30px;height:30px;border-radius:50%;border:2px solid var(--accent);cursor:pointer;object-fit:cover;display:none}
+.user-avatar-placeholder{width:30px;height:30px;border-radius:50%;border:2px solid var(--border2);background:var(--surface2);display:none;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer}
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-logo">
+    <img src="icon.png" alt="MisFinanza">
+    <h1>Mis<span>Finanza</span></h1>
+    <p>Finanzas personales en RD$</p>
+  </div>
+  <div class="login-card">
+    <h2>Bienvenido</h2>
+    <p>Inicia sesión para guardar tus datos en la nube y acceder desde cualquier dispositivo.</p>
+    <button class="btn-google" onclick="signInGoogle()">
+      <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Continuar con Google
+    </button>
+    <div class="login-footer">
+      Tus datos se guardan de forma segura en la nube.<br>
+      Solo tú puedes acceder a tu información.
+    </div>
+  </div>
+</div>
 
 <header class="header">
   <div class="logo">
@@ -203,6 +246,8 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
     <strong id="monthLbl"></strong>
     <button onclick="changeMonth(1)">›</button>
   </div>
+  <img class="user-avatar" id="userAvatar" onclick="showPage('pageAjustes')" alt="Usuario">
+  <div class="user-avatar-placeholder" id="userAvatarPh" onclick="showPage('pageAjustes')">?</div>
 </header>
 
 <main>
@@ -293,6 +338,16 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
     </div>
     <div class="s-item" onclick="clearData()" style="color:var(--red)">
       <div class="s-item-left"><span class="ico">🗑️</span>Borrar todos los datos</div>
+      <div class="s-item-right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></div>
+    </div>
+  </div>
+  <div class="settings-block" id="userInfoBlock">
+    <div class="s-item">
+      <div class="s-item-left"><span class="ico">👤</span><span id="userNameAjustes">—</span></div>
+      <div class="s-item-right" style="font-size:10px;color:var(--text-muted)" id="userEmailAjustes"></div>
+    </div>
+    <div class="s-item" onclick="doSignOut()" style="color:var(--red)">
+      <div class="s-item-left"><span class="ico">🚪</span>Cerrar sesión</div>
       <div class="s-item-right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></div>
     </div>
   </div>
@@ -393,9 +448,106 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
 <div class="toast" id="toast"></div>
 
 <script>
-// MisFinanza v2.0 — 100% local, sin servidor
+// MisFinanza v3.0 — Firebase Auth + Firestore
 const STORE_TXS = 'mf_txs';
 const STORE_BGT = 'mf_budgets';
+
+// ── FIREBASE ──────────────────────────────────
+const FB_CONFIG = {
+  apiKey:"AIzaSyCunpEkRlQLwgd_wpUy3mHvbB0BxV6bIiM",
+  authDomain:"remote-d95fc.firebaseapp.com",
+  projectId:"remote-d95fc",
+  storageBucket:"remote-d95fc.firebasestorage.app",
+  messagingSenderId:"559238967039",
+  appId:"1:559238967039:web:2bf7c22a35a2309c2a66ca"
+};
+firebase.initializeApp(FB_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+db.enablePersistence().catch(()=>{});
+
+let currentUser = null;
+
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    currentUser = user;
+    document.getElementById('loginScreen').classList.add('hidden');
+    // Avatar
+    const av = document.getElementById('userAvatar');
+    const ph = document.getElementById('userAvatarPh');
+    if (user.photoURL) { av.src=user.photoURL; av.style.display='block'; ph.style.display='none'; }
+    else { ph.style.display='flex'; av.style.display='none'; ph.textContent=user.displayName?.[0]||'U'; }
+    // Ajustes
+    document.getElementById('userNameAjustes').textContent = user.displayName || 'Usuario';
+    document.getElementById('userEmailAjustes').textContent = user.email || '';
+    await initApp();
+  } else {
+    currentUser = null;
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('userAvatar').style.display='none';
+    document.getElementById('userAvatarPh').style.display='none';
+  }
+});
+
+async function signInGoogle() {
+  const btn = document.querySelector('.btn-google');
+  btn.textContent='Conectando...'; btn.disabled=true;
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithPopup(provider);
+  } catch(e) {
+    btn.innerHTML='<svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Continuar con Google';
+    btn.disabled=false;
+    toast('Error al iniciar sesión','err');
+  }
+}
+
+function doSignOut() {
+  if (!confirm('¿Cerrar sesión?')) return;
+  auth.signOut();
+}
+
+async function cloudLoad() {
+  if (!currentUser) return;
+  try {
+    const doc = await db.collection('users').doc(currentUser.uid).collection('data').doc('main').get();
+    if (doc.exists) {
+      const d = doc.data();
+      txs     = d.transactions || [];
+      budgets = d.budgets      || {};
+    } else {
+      // First time: check localStorage migration
+      const oldTxs = localStorage.getItem(STORE_TXS);
+      const oldBgt = localStorage.getItem(STORE_BGT);
+      if (oldTxs) txs = JSON.parse(oldTxs);
+      if (oldBgt) budgets = JSON.parse(oldBgt);
+      if (txs.length > 0) await cloudSave();
+    }
+  } catch(e) {
+    // Offline: use localStorage cache
+    const uid = currentUser.uid;
+    txs     = JSON.parse(localStorage.getItem(STORE_TXS+'_'+uid)||localStorage.getItem(STORE_TXS)||'[]');
+    budgets = JSON.parse(localStorage.getItem(STORE_BGT+'_'+uid)||localStorage.getItem(STORE_BGT)||'{}');
+  }
+}
+
+let _saveTimer;
+async function cloudSave() {
+  if (!currentUser) return;
+  const uid = currentUser.uid;
+  localStorage.setItem(STORE_TXS+'_'+uid, JSON.stringify(txs));
+  localStorage.setItem(STORE_BGT+'_'+uid, JSON.stringify(budgets));
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async () => {
+    try {
+      await db.collection('users').doc(uid).collection('data').doc('main').set({
+        transactions: txs,
+        budgets,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) {}
+  }, 800);
+}
 
 const CATS_INC = [
   {id:'salario',e:'💼',n:'Salario'},{id:'freelance',e:'💻',n:'Freelance'},
@@ -427,10 +579,7 @@ function init() {
   renderAll();
 }
 
-function persist() {
-  localStorage.setItem(STORE_TXS, JSON.stringify(txs));
-  localStorage.setItem(STORE_BGT, JSON.stringify(budgets));
-}
+function persist() { cloudSave(); }
 
 // ── MONTH ─────────────────────────────────────
 function updateMonthLbl() {
@@ -721,6 +870,25 @@ function exportReport() {
 .promo-name{font-size:14px;font-weight:700;color:#ff7c2a}
 .promo-desc{font-size:11px;color:var(--text-muted);margin-top:2px}
 .promo-arrow{color:#ff7c2a;font-size:18px;flex-shrink:0}
+
+/* LOGIN SCREEN */
+.login-screen{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--pad)}
+.login-screen.hidden{display:none}
+.login-logo{margin-bottom:28px;text-align:center}
+.login-logo img{width:80px;height:80px;border-radius:24px;box-shadow:0 8px 32px var(--accent-glow)}
+.login-logo h1{font-size:26px;font-weight:800;margin-top:14px;letter-spacing:-.5px}
+.login-logo h1 span{color:var(--accent)}
+.login-logo p{font-size:13px;color:var(--text-muted);margin-top:4px}
+.login-card{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:28px 24px}
+.login-card h2{font-size:17px;font-weight:700;margin-bottom:6px}
+.login-card p{font-size:12px;color:var(--text-muted);margin-bottom:24px}
+.btn-google{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:14px;background:var(--surface2);border:1.5px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:15px;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-google:hover{border-color:var(--accent);box-shadow:0 0 20px var(--accent-glow)}
+.btn-google svg{width:22px;height:22px;flex-shrink:0}
+.login-footer{margin-top:20px;font-size:11px;color:var(--text-muted);text-align:center;line-height:1.6}
+/* USER AVATAR */
+.user-avatar{width:30px;height:30px;border-radius:50%;border:2px solid var(--accent);cursor:pointer;object-fit:cover;display:none}
+.user-avatar-placeholder{width:30px;height:30px;border-radius:50%;border:2px solid var(--border2);background:var(--surface2);display:none;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer}
 </style></head>
   <body><h1>MisFinanza</h1><p style="color:#666">${MONTHS_F[viewM]} ${viewY}</p>
   <div class="cards"><div class="card g"><div class="lbl">Ingresos</div><div class="val">${fmt(inc)}</div></div>
@@ -759,7 +927,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/MisFinanza/sw.js').catch(()=>{});
 }
 
-init();
+// auth.onAuthStateChanged handles startup
 </script>
 </body>
 </html>
