@@ -585,13 +585,12 @@ const MONTHS_S = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','N
 let txs=[], budgets={}, currentType='ingreso', selectedCat=null, editId=null, filterType='all';
 let viewM, viewY, charts={}, deferredPrompt=null;
 
-function init() {
+async function initApp() {
   const now = new Date();
   viewM = now.getMonth(); viewY = now.getFullYear();
-  txs     = JSON.parse(localStorage.getItem(STORE_TXS)||'[]');
-  budgets = JSON.parse(localStorage.getItem(STORE_BGT)||'{}');
   document.getElementById('inpDate').value = now.toISOString().split('T')[0];
   updateMonthLbl();
+  await cloudLoad();
   renderAll();
 }
 
