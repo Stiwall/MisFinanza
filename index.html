@@ -467,14 +467,8 @@ const db   = firebase.firestore();
 db.enablePersistence().catch(()=>{});
 
 // Handle redirect result on page load
-auth.getRedirectResult().then(result => {
-  // result.user is handled by onAuthStateChanged
-}).catch(e => {
-  if (e.code !== 'auth/no-current-user') {
-    document.getElementById('loginScreen').classList.remove('hidden');
-    const btn = document.querySelector('.btn-google');
-    if (btn) { btn.textContent = 'Continuar con Google'; btn.disabled = false; }
-  }
+auth.getRedirectResult().catch(e => {
+  console.warn('getRedirectResult error:', e.code, e.message);
 });
 
 let currentUser = null;
@@ -501,14 +495,22 @@ auth.onAuthStateChanged(async user => {
 });
 
 async function signInGoogle() {
-  const btn = document.querySelector('.btn-google');
-  btn.textContent = 'Redirigiendo...'; btn.disabled = true;
+  const btn = document.getElementById('googleBtn');
+  btn.disabled = true;
+  const provider = new firebase.auth.GoogleAuthProvider();
+  // Try popup first (desktop), fall back to redirect (mobile)
   try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithRedirect(provider);
+    btn.textContent = 'Abriendo...';
+    await auth.signInWithPopup(provider);
   } catch(e) {
-    btn.textContent = 'Continuar con Google'; btn.disabled = false;
-    toast('Error: ' + e.message, 'err');
+    if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
+      btn.textContent = 'Redirigiendo...';
+      try { await auth.signInWithRedirect(provider); }
+      catch(e2) { btn.textContent='Continuar con Google'; btn.disabled=false; toast(e2.code||e2.message,'err'); }
+    } else {
+      btn.textContent = 'Continuar con Google'; btn.disabled = false;
+      toast(e.code + ': ' + e.message, 'err');
+    }
   }
 }
 
