@@ -6,8 +6,8 @@
   "scope": "/MisFinanza/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#080d1a",
-  "theme_color": "#00e5a0",
+  "background_color": "#08090f",
+  "theme_color": "#7c5cfc",
   "lang": "es-DO",
   "dir": "ltr",
   "categories": [
