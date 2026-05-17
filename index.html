@@ -116,6 +116,35 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
 .fill-safe{background:var(--green)} .fill-warn{background:var(--gold)} .fill-over{background:var(--red)}
 .budget-pct{font-size:11px;font-weight:700;margin-top:4px;text-align:right}
 
+/* DISTRIBUCIÓN */
+.regla-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.regla-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.regla-title{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted)}
+.regla-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:50px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
+.regla-bucket{margin-bottom:10px}
+.regla-bucket:last-child{margin-bottom:0}
+.regla-bucket-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.regla-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.regla-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.regla-vals{font-size:11px;color:var(--text-muted);font-weight:600}
+.regla-bar{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:3px}
+.regla-fill{height:100%;border-radius:3px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.regla-sub{font-size:10px;font-weight:700;text-align:right}
+.preset-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.preset-btn{padding:7px 14px;border-radius:50px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.preset-btn.sel{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
+.bucket-row{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px}
+.bucket-color{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.bucket-inp-name{flex:1;background:none;border:none;color:var(--text);font-size:13px;font-weight:600;font-family:'Inter',sans-serif;outline:none;min-width:0}
+.bucket-inp-pct{width:50px;background:var(--surface3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;font-weight:700;text-align:center;padding:4px 6px;font-family:'Inter',sans-serif;outline:none}
+.bucket-inp-pct:focus{border-color:var(--accent)}
+.bucket-del{background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1;padding:0 2px;flex-shrink:0}
+.bucket-del:hover{color:var(--red)}
+.regla-total-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--border);margin:4px 0 16px}
+.regla-total-lbl{font-size:12px;font-weight:700;color:var(--text-muted)}
+.regla-total-val{font-size:15px;font-weight:800}
+.regla-total-val.ok{color:var(--green)} .regla-total-val.no{color:var(--red)}
+
 /* FILTER CHIPS */
 .filter-row{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:12px}
 .filter-row::-webkit-scrollbar{display:none}
@@ -364,6 +393,10 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
 
 <!-- PRESUPUESTO -->
 <div class="page" id="pagePresupuesto">
+  <div id="reglaSection"></div>
+  <div class="sec-hdr" style="margin-bottom:10px">
+    <span class="sec-title">💰 Presupuestos por categoría</span>
+  </div>
   <div id="budgetList"></div>
   <button class="submit-btn" style="margin-top:4px" onclick="openBudgetModal()">+ Agregar presupuesto</button>
 </div>
@@ -512,6 +545,31 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
         <input type="number" id="budgetAmt" placeholder="0.00" inputmode="decimal" min="0">
       </div>
       <button class="submit-btn" onclick="saveBudget()">Guardar presupuesto</button>
+    </div>
+  </div>
+</div>
+
+<!-- REGLA MODAL -->
+<div class="modal-overlay" id="reglaOverlay" onclick="closeReglaBg(event)">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-top">
+      <span class="modal-title">Regla de distribución</span>
+      <button class="modal-x" onclick="closeReglaModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Plantilla</label>
+        <div class="preset-row" id="presetRow"></div>
+      </div>
+      <div class="field"><label>Cubos</label>
+        <div id="bucketRows"></div>
+        <button onclick="addBucket()" style="width:100%;padding:9px;border:1px dashed var(--border2);border-radius:var(--radius-sm);background:none;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;margin-top:2px">+ Agregar cubo</button>
+      </div>
+      <div class="regla-total-row">
+        <span class="regla-total-lbl">Total %</span>
+        <span class="regla-total-val" id="totalPct">0%</span>
+      </div>
+      <button class="submit-btn" onclick="saveRegla()">Guardar regla</button>
     </div>
   </div>
 </div>
@@ -704,6 +762,7 @@ async function cloudLoad() {
       loans        = d.loans         || [];
       cardPayments = d.cardPayments  || [];
       loanPayments = d.loanPayments  || [];
+      if (d.regla) regla = d.regla;
     } else {
       const uid = currentUser.uid;
       const oldTxs = localStorage.getItem(STORE_TXS);
@@ -747,6 +806,7 @@ async function cloudSave() {
         loans,
         cardPayments,
         loanPayments,
+        regla,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     } catch(e) {
@@ -773,8 +833,28 @@ const ALL_CATS = [...CATS_INC, ...CATS_EXP];
 const MONTHS_F = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MONTHS_S = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
+const REGLA_PRESETS = [
+  {id:'50-30-20',name:'50/30/20',buckets:[
+    {id:'nec',name:'Necesidades',emoji:'🏠',pct:50,color:'#00d4aa',cats:['comida','hogar','salud','servicios','transporte','deuda']},
+    {id:'des',name:'Deseos',emoji:'🎮',pct:30,color:'#7c5cfc',cats:['ocio','ropa','educacion','tecnologia','otro-e']},
+    {id:'aho',name:'Ahorro',emoji:'🐷',pct:20,color:'#fbbf24',cats:['ahorro']},
+  ]},
+  {id:'70-20-10',name:'70/20/10',buckets:[
+    {id:'nec',name:'Necesidades',emoji:'🏠',pct:70,color:'#00d4aa',cats:['comida','hogar','salud','servicios','transporte','deuda']},
+    {id:'des',name:'Deseos',emoji:'🎮',pct:20,color:'#7c5cfc',cats:['ocio','ropa','educacion','tecnologia','otro-e']},
+    {id:'aho',name:'Ahorro',emoji:'🐷',pct:10,color:'#fbbf24',cats:['ahorro']},
+  ]},
+  {id:'80-20',name:'80/20',buckets:[
+    {id:'gas',name:'Gastos',emoji:'💳',pct:80,color:'#00d4aa',cats:['comida','hogar','salud','servicios','transporte','deuda','ocio','ropa','educacion','tecnologia','otro-e']},
+    {id:'aho',name:'Ahorro',emoji:'🐷',pct:20,color:'#fbbf24',cats:['ahorro']},
+  ]},
+];
+const BUCKET_COLORS = ['#00d4aa','#7c5cfc','#fbbf24','#ff4d6d','#60a5fa'];
+
 let txs=[], budgets={}, currentType='ingreso', selectedCat=null, editId=null, filterType='all';
 let cards=[], loans=[], cardPayments=[], loanPayments=[];
+let regla = {enabled:true, template:'50-30-20', buckets:JSON.parse(JSON.stringify(REGLA_PRESETS[0].buckets))};
+let _reglaEditBuckets = [];
 let selectedCardColor='dc-purple';
 let viewM, viewY, charts={}, deferredPrompt=null;
 
@@ -815,7 +895,7 @@ function catOf(id) {
 
 // ── RENDER ────────────────────────────────────
 function renderAll() {
-  renderHero(); renderRecent(); renderTxList(); renderBudgets();
+  renderHero(); renderRecent(); renderTxList(); renderRegla(); renderBudgets();
   renderDebtWidget(); renderDebtPage();
   if (document.getElementById('pageAnalisis').classList.contains('active')) renderCharts();
 }
@@ -1045,6 +1125,103 @@ function saveBudget() {
   if (!amt||amt<=0) { toast('Ingresa un monto','err'); return; }
   budgets[cid] = amt; persist(); closeBudgetModal(); renderBudgets();
   toast('Presupuesto guardado','ok');
+}
+
+// ── REGLA DISTRIBUCIÓN ────────────────────────
+function renderRegla() {
+  const el = document.getElementById('reglaSection');
+  if (!el || !regla.enabled || !regla.buckets.length) { if(el) el.innerHTML=''; return; }
+  const mt = monthTxs();
+  const totalInc = mt.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
+  const preset = REGLA_PRESETS.find(p=>p.id===regla.template);
+  const badge = preset ? preset.name : 'Personalizado';
+  el.innerHTML = `<div class="regla-card">
+    <div class="regla-hdr">
+      <span class="regla-title">📊 Distribución</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="regla-badge">${badge}</span>
+        <button class="sec-action" onclick="openReglaModal()">Editar</button>
+      </div>
+    </div>
+    ${totalInc===0?'<div style="font-size:12px;color:var(--text-muted);padding:4px 0 6px">Sin ingresos este mes — registra un ingreso para ver los montos</div>':''}
+    ${regla.buckets.map(b=>{
+      const target = totalInc * b.pct / 100;
+      const actual = mt.filter(t=>t.type==='gasto'&&b.cats.includes(t.catId)).reduce((s,t)=>s+t.amount,0);
+      const pct = target>0 ? Math.min(100,Math.round((actual/target)*100)) : 0;
+      const over = actual>target && target>0;
+      const subColor = over?'var(--red)':pct>=75?'var(--gold)':'var(--text-muted)';
+      return `<div class="regla-bucket">
+        <div class="regla-bucket-hdr">
+          <div class="regla-name"><div class="regla-dot" style="background:${b.color}"></div>${b.emoji} ${b.name} <span style="color:var(--text-muted);font-size:11px;font-weight:500">${b.pct}%</span></div>
+          <div class="regla-vals">${fmt(actual)} / ${fmt(target)}</div>
+        </div>
+        <div class="regla-bar"><div class="regla-fill" style="width:${pct}%;background:${over?'var(--red)':b.color}"></div></div>
+        <div class="regla-sub" style="color:${subColor}">${over?'⚠️ Excedido':pct+'% usado'}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function openReglaModal() {
+  _reglaEditBuckets = JSON.parse(JSON.stringify(regla.buckets));
+  renderPresetBtns();
+  renderBucketRows();
+  document.getElementById('reglaOverlay').classList.add('open');
+}
+function closeReglaModal() { document.getElementById('reglaOverlay').classList.remove('open'); }
+function closeReglaBg(e) { if(e.target.id==='reglaOverlay') closeReglaModal(); }
+
+function renderPresetBtns() {
+  document.getElementById('presetRow').innerHTML =
+    REGLA_PRESETS.map(p=>`<button class="preset-btn${regla.template===p.id?' sel':''}" onclick="applyPreset('${p.id}')">${p.name}</button>`).join('') +
+    `<button class="preset-btn${regla.template==='custom'?' sel':''}" onclick="applyPreset('custom')">Personalizado</button>`;
+}
+
+function applyPreset(id) {
+  const preset = REGLA_PRESETS.find(p=>p.id===id);
+  regla.template = id;
+  if (preset) _reglaEditBuckets = JSON.parse(JSON.stringify(preset.buckets));
+  renderPresetBtns();
+  renderBucketRows();
+}
+
+function renderBucketRows() {
+  document.getElementById('bucketRows').innerHTML = _reglaEditBuckets.map((b,i)=>`
+    <div class="bucket-row">
+      <div class="bucket-color" style="background:${b.color}"></div>
+      <input class="bucket-inp-name" value="${b.name}" oninput="_reglaEditBuckets[${i}].name=this.value" placeholder="Nombre">
+      <input class="bucket-inp-pct" type="number" value="${b.pct}" min="1" max="100" inputmode="numeric" oninput="_reglaEditBuckets[${i}].pct=+this.value||0;updateTotal()">
+      <span style="font-size:11px;color:var(--text-muted)">%</span>
+      ${_reglaEditBuckets.length>1?`<button class="bucket-del" onclick="removeBucket(${i})">×</button>`:''}
+    </div>`).join('');
+  updateTotal();
+}
+
+function updateTotal() {
+  const sum = _reglaEditBuckets.reduce((s,b)=>s+(+b.pct||0),0);
+  const el = document.getElementById('totalPct');
+  el.textContent = sum+'%';
+  el.className = 'regla-total-val '+(sum===100?'ok':'no');
+}
+
+function addBucket() {
+  if (_reglaEditBuckets.length>=5) { toast('Máximo 5 cubos','err'); return; }
+  _reglaEditBuckets.push({id:'b'+Date.now(),name:'Nuevo',emoji:'📦',pct:0,color:BUCKET_COLORS[_reglaEditBuckets.length%BUCKET_COLORS.length],cats:[]});
+  regla.template='custom'; renderPresetBtns(); renderBucketRows();
+}
+
+function removeBucket(i) {
+  _reglaEditBuckets.splice(i,1);
+  regla.template='custom'; renderPresetBtns(); renderBucketRows();
+}
+
+function saveRegla() {
+  const sum = _reglaEditBuckets.reduce((s,b)=>s+(+b.pct||0),0);
+  if (sum!==100) { toast('Los % deben sumar 100','err'); return; }
+  if (_reglaEditBuckets.some(b=>!b.name.trim())) { toast('Todos los cubos necesitan nombre','err'); return; }
+  regla.buckets = JSON.parse(JSON.stringify(_reglaEditBuckets));
+  persist(); closeReglaModal(); renderRegla();
+  toast('Regla guardada','ok');
 }
 
 // ── PAGES ─────────────────────────────────────
