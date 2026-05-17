@@ -558,8 +558,10 @@ async function cloudSave() {
         budgets,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      console.log('Firestore save OK, txs:', txs.length);
     } catch(e) {
       console.error('Firestore save error:', e.code, e.message);
+      toast('Error al guardar: ' + e.code, 'err');
     }
   }, 800);
 }
@@ -808,9 +810,12 @@ function saveTx() {
     toast('Movimiento actualizado');
   } else {
     txs.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),type:currentType,amount:amt,desc,catId:selectedCat,date});
-    toast('Guardado','ok');
+    console.log('TX saved, txs count:', txs.length, 'viewM:', viewM, 'viewY:', viewY);
   }
-  persist(); closeModal(); renderAll();
+  persist();
+  closeModal();
+  renderAll();
+  console.log('After renderAll, monthTxs:', monthTxs().length);
 }
 
 // long press to delete
