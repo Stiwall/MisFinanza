@@ -1,6 +1,6 @@
-# MisCuentas RD — Bot de Finanzas Personales
+# MisFinanza RD — Finanzas Personales
 
-MisCuentas RD es una aplicación web progresiva (PWA) diseñada para ayudar a los usuarios a gestionar sus finanzas personales de manera sencilla e intuitiva. Permite registrar ingresos y gastos, categorizarlos, y visualizar un resumen de la situación financiera.
+MisFinanza RD es una aplicación web progresiva (PWA) diseñada para ayudar a los usuarios a gestionar sus finanzas personales de manera sencilla e intuitiva. Permite registrar ingresos y gastos, categorizarlos, y visualizar un resumen de la situación financiera.
 
 ## Características
 
