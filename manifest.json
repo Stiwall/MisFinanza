@@ -2,8 +2,8 @@
   "name": "MisFinanza RD",
   "short_name": "MisFinanza",
   "description": "Finanzas personales en pesos dominicanos",
-  "start_url": "/miscuentas-bot/",
-  "scope": "/miscuentas-bot/",
+  "start_url": "/MisFinanza/",
+  "scope": "/MisFinanza/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#080d1a",
@@ -71,7 +71,7 @@
       "name": "Resumen",
       "short_name": "Resumen",
       "description": "Ver balance del mes",
-      "url": "/miscuentas-bot/#resumen",
+      "url": "/MisFinanza/#resumen",
       "icons": [
         {
           "src": "icon-96.png",
@@ -83,7 +83,7 @@
       "name": "Nuevo movimiento",
       "short_name": "Agregar",
       "description": "Registrar ingreso o gasto",
-      "url": "/miscuentas-bot/#nuevo",
+      "url": "/MisFinanza/#nuevo",
       "icons": [
         {
           "src": "icon-96.png",
