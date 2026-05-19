@@ -1082,7 +1082,7 @@ function txRow(t) {
   const ds = d.toLocaleDateString('es-DO',{day:'numeric',month:'short'});
   return `<div class="tx-item">
     <div class="tx-icon ${t.type==='ingreso'?'inc':'exp'}">${cat.e}</div>
-    <div class="tx-body" onclick="openModal('${t.id}')" style="cursor:pointer;flex:1;min-width:0">
+    <div class="tx-body" style="flex:1;min-width:0">
       <div class="tx-name">${t.desc||cat.n}</div>
       <div class="tx-meta">
         <span>${cat.n} · ${ds}</span>
