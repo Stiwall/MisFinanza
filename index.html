@@ -38,8 +38,8 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
 /* HEADER */
 .header{position:sticky;top:0;z-index:100;height:var(--header-h);background:rgba(8,9,15,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 var(--pad)}
 .logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;letter-spacing:-.5px;color:var(--text);text-decoration:none}
-.logo-mark{width:36px;height:36px;background:linear-gradient(135deg,#7c5cfc,#a78bfa);border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px var(--accent-glow);flex-shrink:0}
-.logo-mark svg{width:20px;height:20px}
+.tx-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+
 .logo-name{color:var(--text)}
 .logo-name span{color:var(--accent)}
 .month-nav{display:flex;align-items:center;gap:2px;background:var(--surface2);border:1px solid var(--border2);border-radius:50px;padding:4px 6px 4px 12px}
@@ -360,15 +360,7 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
 
 <header class="header">
   <div class="logo">
-    <div class="logo-mark">
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="5" width="20" height="14" rx="3" fill="white" opacity=".15"/>
-        <path d="M2 10h20" stroke="white" stroke-width="1.5"/>
-        <rect x="5" y="14" width="4" height="2" rx="1" fill="white"/>
-        <rect x="11" y="14" width="3" height="2" rx="1" fill="white"/>
-        <path d="M17 7.5V3.5M17 3.5L15 5.5M17 3.5L19 5.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
+    <img src="icon.png" style="width:36px;height:36px;border-radius:10px;flex-shrink:0" alt="MisFinanza">
     <span class="logo-name">Mis<span>Finanza</span></span>
   </div>
   <div class="month-nav">
@@ -1086,11 +1078,13 @@ function txRow(t) {
   const ds = d.toLocaleDateString('es-DO',{day:'numeric',month:'short'});
   return `<div class="tx-item">
     <div class="tx-icon ${t.type==='ingreso'?'inc':'exp'}">${cat.e}</div>
-    <div class="tx-body" onclick="openModal('${t.id}')" style="cursor:pointer;flex:1">
-      <div class="tx-name">${t.desc||cat.n}</div>
+    <div class="tx-body" onclick="openModal('${t.id}')" style="cursor:pointer;flex:1;min-width:0">
+      <div class="tx-top">
+        <div class="tx-name">${t.desc||cat.n}</div>
+        <div class="tx-amt ${t.type==='ingreso'?'inc':'exp'}">${t.type==='ingreso'?'+':'-'}${fmt(t.amount)}</div>
+      </div>
       <div class="tx-meta">${cat.n} · ${ds}</div>
     </div>
-    <div class="tx-amt ${t.type==='ingreso'?'inc':'exp'}" style="margin-right:4px">${t.type==='ingreso'?'+':'-'}${fmt(t.amount)}</div>
     <div class="tx-actions">
       <button class="tx-btn" onclick="openModal('${t.id}')">✏️</button>
       <button class="tx-btn tx-btn-del" onclick="deleteTx('${t.id}')">🗑️</button>
