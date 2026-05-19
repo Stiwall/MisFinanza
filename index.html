@@ -1393,20 +1393,11 @@ function saveTx() {
   closeModal();
 }
 
-// long press to delete
-let _pt;
-document.addEventListener('touchstart',e=>{
-  const item = e.target.closest('.tx-item'); if(!item) return;
-  const m = item.getAttribute('onclick')?.match(/openModal\('(.+?)'\)/);
-  if (!m) return;
-  _pt = setTimeout(()=>{
-    if(confirm('¿Eliminar este movimiento?')) {
-      txs = txs.filter(t=>t.id!==m[1]);
-      persist(); renderAll(); toast('Eliminado');
-    }
-  },600);
-},{passive:true});
-document.addEventListener('touchend',()=>clearTimeout(_pt),{passive:true});
+function deleteTx(id) {
+  if (!confirm('¿Eliminar este movimiento?')) return;
+  txs = txs.filter(t=>t.id!==id);
+  persist(); renderAll(); toast('Eliminado');
+}
 
 // ── BUDGET MODAL ─────────────────────────────
 function openBudgetModal() { buildCatGrid(); document.getElementById('budgetOverlay').classList.add('open'); }
