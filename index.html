@@ -618,7 +618,7 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
       <div class="onboard-preview" id="onboardPreview"></div>
       <div class="onboard-sub" style="font-size:11px;margin-bottom:20px">Puedes personalizar estos porcentajes en Presupuesto → Editar regla</div>
       <button class="submit-btn" onclick="finishOnboard(false)">Empezar a registrar →</button>
-      <button class="onboard-skip" onclick="finishOnboard(true)">Entrar sin configurar</button>
+      <button class="onboard-skip" onclick="finishOnboard(true)">Saltar por ahora</button>
     </div>
   </div>
 </div>
@@ -922,6 +922,8 @@ function doSignOut() {
 
 async function cloudLoad() {
   if (!currentUser) return;
+  const app = document.getElementById('app');
+  if (app) app.style.opacity = '0.6';
   try {
     const doc = await db.collection('users').doc(currentUser.uid).collection('data').doc('main').get();
     if (doc.exists) {
@@ -1022,6 +1024,7 @@ const REGLA_PRESETS = [
   ]},
 ];
 const BUCKET_COLORS = ['#00d4aa','#7c5cfc','#fbbf24','#ff4d6d','#60a5fa'];
+const CHART_COLORS = CHART_COLORS;
 
 let txs=[], budgets={}, currentType='ingreso', selectedCat=null, editId=null, filterType='all';
 let cards=[], loans=[], cardPayments=[], loanPayments=[];
@@ -1037,6 +1040,8 @@ async function initApp() {
   document.getElementById('inpDate').value = now.toISOString().split('T')[0];
   updateMonthLbl();
   await cloudLoad();
+  const app = document.getElementById('app');
+  if (app) app.style.opacity = '1';
   renderAll();
   if (!settings.onboarded) {
     document.getElementById('onboardScreen').classList.remove('hidden');
@@ -1073,9 +1078,15 @@ function catOf(id) {
 
 // ── RENDER ────────────────────────────────────
 function renderAll() {
-  renderHero(); renderRecent(); renderTxList(); renderRegla(); renderBudgets();
-  renderDebtWidget(); renderDebtPage();
-  if (document.getElementById('pageAnalisis').classList.contains('active')) renderAnalisis();
+  const pg = document.querySelector('.page.active')?.id || 'pageInicio';
+  renderHero();
+  if (pg === 'pageInicio') { renderRecent(); renderDebtWidget(); return; }
+  if (pg === 'pageTx') { renderTxList(); return; }
+  if (pg === 'pagePresupuesto') { renderRegla(); renderBudgets(); return; }
+  if (pg === 'pageAnalisis') { renderAnalisis(); return; }
+  if (pg === 'pageDeudas') { renderDebtPage(); return; }
+  if (pg === 'pageAjustes') return;
+  renderRecent(); renderDebtWidget(); renderTxList(); renderRegla(); renderBudgets(); renderDebtPage();
 }
 
 function getWalletBalance() {
@@ -1092,18 +1103,27 @@ function getCardDebt() {
 function prevPeriodDebt(card) {
   const cycleS = cycleStart(card);
   const cp = (cardPayments||[]).filter(p=>p.cardId===card.id);
-  let lastPay = cp.length>0 ? new Date(cp.sort((a,b)=>new Date(b.date)-new Date(a.date))[0].date+'T12:00:00') : null;
-  return txs.filter(t=>t.cardId===card.id && new Date(t.date+'T12:00:00') < cycleS && (!lastPay || new Date(t.date+'T12:00:00') > lastPay)).reduce((s,t)=>s+t.amount,0);
+  const lastPayStr = cp.length>0 ? cp.reduce((a,b)=>a.date>b.date?a:b).date : null;
+  return txs.reduce((s,t) => {
+    if (t.cardId!==card.id) return s;
+    const d = t.date;
+    if (d >= cycleS.toISOString().slice(0,10)) return s;
+    if (lastPayStr && d <= lastPayStr) return s;
+    return s + t.amount;
+  }, 0);
+}
+function monthAggregates() {
+  const mt = monthTxs();
+  let inc = 0, exp = 0;
+  for (const t of mt) { if (t.type==='ingreso') inc += t.amount; else exp += t.amount; }
+  return { inc, exp, bal: inc - exp };
 }
 function renderHero() {
   const wallet = getWalletBalance();
-  const debt = getCardDebt();
   const el = document.getElementById('heroBalance');
   el.textContent = (wallet<0?'-':'') + fmt(Math.abs(wallet));
   el.className = 'bal-amt ' + (wallet>0?'pos':wallet<0?'neg':'zero');
-  const mt = monthTxs();
-  const inc = mt.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
-  const exp = mt.filter(t=>t.type!=='ingreso').reduce((s,t)=>s+t.amount,0);
+  const { inc, exp } = monthAggregates();
   document.getElementById('heroInc').textContent = fmt(inc);
   document.getElementById('heroExp').textContent = fmt(exp);
 }
@@ -1155,14 +1175,14 @@ function setFilter(type, btn) {
 
 // ── ANÁLISIS ──────────────────────────────────
 function renderNetPosition() {
-  const wallet = getWalletBalance();
-  const debt = getCardDebt();
-  const net = wallet - debt;
-  document.getElementById('netWallet').textContent = fmt(Math.abs(wallet));
-  document.getElementById('netWallet').className = 'net-card-val ' + (wallet>=0?'pos':'neg');
+  const wallet = getWalletBalance(), debt = getCardDebt(), net = wallet - debt;
+  const nw = document.getElementById('netWallet');
+  nw.textContent = fmt(Math.abs(wallet));
+  nw.className = 'net-card-val ' + (wallet>=0?'pos':'neg');
   document.getElementById('netDebt').textContent = fmt(debt);
-  document.getElementById('netPos').textContent = fmt(Math.abs(net));
-  document.getElementById('netPos').className = 'net-card-val ' + (net>=0?'pos':'neg');
+  const np = document.getElementById('netPos');
+  np.textContent = fmt(Math.abs(net));
+  np.className = 'net-card-val ' + (net>=0?'pos':'neg');
 }
 function renderAnalisis() { renderNetPosition(); renderKPIs(); renderTendencias(); renderDonut(); renderTopCats(); renderBars(); }
 
@@ -1719,6 +1739,15 @@ function progressBar(pct, cls='') {
 }
 
 // ── DEBT — RENDER ─────────────────────────────
+function debtAlertBanner(prev, cardId, isWidget=false) {
+  if (prev <= 0) return '';
+  const label = isWidget ? '⚠️ Período anterior — ir a Deudas' : '⚠️ Deuda período anterior';
+  const btn = isWidget ? '' : `<button class="d-btn primary" onclick="openPayCardModal('${cardId}')" style="margin:0">Pagar</button>`;
+  const pad = isWidget ? '8px 10px' : '10px 12px';
+  const mb = isWidget ? '8px' : '10px';
+  const fs = isWidget ? '15px' : '16px';
+  return `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--red-dim);border:1px solid #ff4d6d30;border-radius:8px;padding:${pad};margin-bottom:${mb}"><div><div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.8px">${label}</div><div style="font-size:${fs};font-weight:700;color:var(--red)">${fmt(prev)}</div></div>${btn}</div>`;
+}
 function renderDebtWidget() {
   const sec = document.getElementById('debtWidgetSection');
   const el  = document.getElementById('debtWidget');
@@ -1728,7 +1757,7 @@ function renderDebtWidget() {
   cards.slice(0,2).forEach(c => {
     const prev = prevPeriodDebt(c), used = cardUsed(c), limit = c.limit||1, pct = Math.round(used/limit*100);
     const cls = pct>=100?'util-over':pct>=70?'util-warn':'util-safe';
-    const prevHtml = prev>0 ? `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--red-dim);border:1px solid #ff4d6d30;border-radius:8px;padding:8px 10px;margin-bottom:8px"><div><div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.8px">⚠️ Período anterior — ir a Deudas</div><div style="font-size:15px;font-weight:700;color:var(--red)">${fmt(prev)}</div></div></div>` : '';
+    const prevHtml = debtAlertBanner(prev, c.id, true);
     html += `<div class="debt-card ${c.color||''}">
       ${prevHtml}
       <div class="debt-hdr">
@@ -1770,7 +1799,7 @@ function renderCardsList() {
   }
   el.innerHTML = cards.map(c => {
     const prev=prevPeriodDebt(c), used=cardUsed(c), limit=c.limit||1, pct=Math.round(used/limit*100);
-    const prevBanner = prev>0 ? `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--red-dim);border:1px solid #ff4d6d30;border-radius:8px;padding:10px 12px;margin-bottom:10px"><div><div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.8px">⚠️ Deuda período anterior</div><div style="font-size:16px;font-weight:700;color:var(--red)">${fmt(prev)}</div></div><button class="d-btn primary" onclick="openPayCardModal('${c.id}')" style="margin:0">Pagar</button></div>` : '';
+    const prevBanner = debtAlertBanner(prev, c.id, false);
     const avail = Math.max(0, limit-used);
     const cls = pct>=100?'util-over':pct>=70?'util-warn':'util-safe';
     const daysCut = daysUntil(c.cutDay||1), daysDue = daysUntil(c.dueDay||1);
@@ -1796,7 +1825,7 @@ function renderCardsList() {
       </div>
       <div class="debt-actions">
         <button class="d-btn primary" onclick="openPayCardModal('${c.id}')">💳 Pagar</button>
-        <button class="d-btn" onclick="openModal();document.getElementById('inpCard').value='${c.id}'">+ Gasto</button>
+        <button class="d-btn${pct>=100?' danger':''}" ${pct>=100?'title="Límite alcanzado"':''} onclick="openModal();document.getElementById('inpCard').value='${c.id}'">+ Gasto</button>
         <button class="d-btn" onclick="editCard('${c.id}')">✏️</button>
         <button class="d-btn danger" onclick="deleteCard('${c.id}')">🗑️</button>
       </div>
