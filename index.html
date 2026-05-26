@@ -1619,7 +1619,7 @@ function showPage(id) {
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const nid = NAV_MAP[id]; if(nid) document.getElementById(nid).classList.add('active');
-  if(id==='pageAnalisis') renderAnalisis();
+  renderAll();
   if(id==='pageAjustes') loadTelegramStatus();
 }
 
