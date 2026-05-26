@@ -192,20 +192,6 @@ body::before { content:''; position:fixed; top:-120px; left:50%; transform:trans
 
 @media (max-width:359px) { .cat-grid { grid-template-columns:repeat(3,1fr); } .nav-btn { padding:5px 11px; } }
 @media (min-width:640px) { :root { --pad-x:28px; } .cat-grid { grid-template-columns:repeat(5,1fr); } }
-.card-debt-row { display:flex; align-items:center; justify-content:space-between; margin-top:12px; padding:8px 10px; background:var(--accent2-dim); border:1px solid #ff4d6d30; border-radius:var(--radius-xs); font-size:var(--fs-xs); }
-.card-debt-label { color:var(--accent2); font-weight:700; }
-.card-debt-amt { font-family:var(--font-num); font-weight:700; color:var(--accent2); }
-.wallet-sub { font-size:var(--fs-2xs); color:var(--text-muted); margin-top:4px; letter-spacing:0.8px; text-transform:uppercase; }
-.net-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:var(--space-md); }
-.net-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 10px; text-align:center; }
-.net-card-label { font-size:var(--fs-2xs); font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
-.net-card-amt { font-family:var(--font-num); font-size:var(--fs-sm); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.net-card-amt.positive { color:var(--accent); }
-.net-card-amt.negative { color:var(--accent2); }
-.net-card-amt.debt { color:var(--accent2); }
-.net-card-amt.wallet-c { color:var(--accent4); }
-.tx-amount.pay { color:var(--accent4); }
-.type-btn.active-pay { background:var(--accent4-dim); border-color:var(--accent4); color:var(--accent4); }
 </style>
 </head>
 <body>
@@ -409,12 +395,17 @@ body::before { content:''; position:fixed; top:-120px; left:50%; transform:trans
 <!-- SUMMARY -->
 <div id="page-resumen" class="page active">
   <div class="balance-card">
-    <div class="balance-label">💼 CARTERA</div>
+    <div class="balance-label" id="balanceLabel">BALANCE DEL MES</div>
     <div class="balance-amount" id="totalBalance">0.00</div>
-    <div class="wallet-sub">Efectivo + Banco · Acumulado</div>
-    <div class="card-debt-row" id="cardDebtRow" style="display:none">
-      <span class="card-debt-label">💳 Deuda tarjeta</span>
-      <span class="card-debt-amt" id="cardDebtAmt">0.00</span>
+    <div class="balance-row">
+      <div class="balance-mini">
+        <div class="balance-mini-label inc" id="incLabel">▲ INGRESOS</div>
+        <div class="balance-mini-amount" id="totalInc">0.00</div>
+      </div>
+      <div class="balance-mini">
+        <div class="balance-mini-label exp" id="expLabel">▼ EGRESOS</div>
+        <div class="balance-mini-amount" id="totalExp">0.00</div>
+      </div>
     </div>
   </div>
   <div class="budget-section">
@@ -612,21 +603,8 @@ body::before { content:''; position:fixed; top:-120px; left:50%; transform:trans
   </div>
 </div>
 
-<!-- ANÁLISIS -->
+<!-- CHARTS -->
 <div id="page-graficas" class="page">
-  <div class="balance-card" style="margin-bottom:var(--space-md)">
-    <div class="balance-label">📅 BALANCE DEL MES</div>
-    <div class="balance-amount" id="monthBal">0.00</div>
-    <div class="balance-row">
-      <div class="balance-mini"><div class="balance-mini-label inc">▲ INGRESOS</div><div class="balance-mini-amount" id="monthInc">0.00</div></div>
-      <div class="balance-mini"><div class="balance-mini-label exp">▼ EGRESOS</div><div class="balance-mini-amount" id="monthExp">0.00</div></div>
-    </div>
-  </div>
-  <div class="net-grid">
-    <div class="net-card"><div class="net-card-label">💼 Cartera</div><div class="net-card-amt wallet-c" id="netWallet">0.00</div></div>
-    <div class="net-card"><div class="net-card-label">💳 Deuda</div><div class="net-card-amt debt" id="netDebt">0.00</div></div>
-    <div class="net-card"><div class="net-card-label">⚖️ Neto</div><div class="net-card-amt" id="netPos">0.00</div></div>
-  </div>
   <div class="chart-card"><div class="section-title" id="chartBarTitle">INGRESOS VS EGRESOS</div><div class="chart-wrap"><canvas id="barChart"></canvas></div></div>
   <div class="chart-card"><div class="section-title" id="chartDonutTitle">EGRESOS POR CATEGORÍA</div><div class="chart-wrap"><canvas id="donutChart"></canvas></div></div>
   <div class="chart-card"><div class="section-title" id="chartTrendTitle">TENDENCIA 6 MESES</div><div class="chart-wrap" style="height:220px"><canvas id="trendChart"></canvas></div></div>
@@ -672,10 +650,9 @@ body::before { content:''; position:fixed; top:-120px; left:50%; transform:trans
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title" id="modalTitle">Nuevo movimiento</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+    <div style="display:flex;gap:8px;margin-bottom:16px">
       <button class="type-btn active-inc" id="btnInc" onclick="setType('ingreso')">▲ Ingreso</button>
       <button class="type-btn"            id="btnExp" onclick="setType('egreso')">▼ Egreso</button>
-      <button class="type-btn"            id="btnPay" onclick="setType('pago_tarjeta')">💳 Pagar</button>
     </div>
     <div class="form-group">
       <label class="form-label" id="descLabel">Descripción</label>
@@ -685,7 +662,7 @@ body::before { content:''; position:fixed; top:-120px; left:50%; transform:trans
       <label class="form-label" id="amountLabel">Monto</label>
       <input class="form-input" id="txAmount" type="number" placeholder="0.00" inputmode="decimal">
     </div>
-    <div class="form-group" id="catSection">
+    <div class="form-group">
       <label class="form-label" id="catLabel">Categoría</label>
       <div class="cat-grid" id="catGrid"></div>
     </div>
@@ -1360,7 +1337,7 @@ function showPage(id, btn) {
     btn.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
   }
   window.scrollTo({ top:0, behavior:'smooth' });
-  if (id === 'graficas') { renderMonthlyBalance(); setTimeout(renderCharts, 100); }
+  if (id === 'graficas') setTimeout(renderCharts, 100);
   if (id === 'exportar') setTimeout(initExportMonth, 50);
   if (id === 'clientes') setTimeout(renderClientes, 50);
   if (id === 'proveedores') setTimeout(renderProveedores, 50);
@@ -1373,12 +1350,11 @@ function showPage(id, btn) {
 // ─── MODAL ────────────────────────────────────────────────────────────────────
 function openModal() {
   el('modalOverlay').classList.add('open');
-  selectedCat = null;
-  el('txDesc').value   = '';
-  el('txAmount').value = '';
   setType('ingreso');
   setAccount('efectivo');
-  el('txDate').value = new Date().toISOString().slice(0, 10);
+  el('txDesc').value   = '';
+  el('txAmount').value = '';
+  selectedCat = null;
   renderCatGrid();
 }
 function closeModal()         { el('modalOverlay').classList.remove('open'); }
@@ -1395,18 +1371,12 @@ function setAccount(acc) {
 function setType(type) {
   currentType = type;
   selectedCat = null;
-  el('btnInc').className = 'type-btn' + (type === 'ingreso'       ? ' active-inc' : '');
-  el('btnExp').className = 'type-btn' + (type === 'egreso'        ? ' active-exp' : '');
-  el('btnPay').className = 'type-btn' + (type === 'pago_tarjeta' ? ' active-pay' : '');
-  const isPay = type === 'pago_tarjeta';
-  el('catSection').style.display   = isPay ? 'none' : 'block';
-  el('accTarjeta').style.display   = isPay ? 'none' : '';
-  if (isPay) { el('txDesc').value = 'Pago de tarjeta'; setAccount('efectivo'); }
+  el('btnInc').className = 'type-btn' + (type==='ingreso' ? ' active-inc' : '');
+  el('btnExp').className = 'type-btn' + (type==='egreso'  ? ' active-exp' : '');
   renderCatGrid();
 }
 
 function renderCatGrid() {
-  if (currentType === 'pago_tarjeta') return;
   const cats = currentType === 'ingreso' ? CATS_INCOME : CATS_EXPENSE;
   el('catGrid').innerHTML = cats.map(c =>
     `<div class="cat-chip ${selectedCat===c.id?'selected':''}" onclick="selectCat('${c.id}')"><span class="emoji">${c.emoji}</span>${c.label}</div>`
@@ -1422,7 +1392,7 @@ async function saveTransaction() {
   if (!desc)              { el('txDesc').focus(); return; }
   if (!amount || amount <= 0) { el('txAmount').focus(); return; }
   if (!date)              { el('txDate').focus(); return; }
-  if (currentType !== 'pago_tarjeta' && !selectedCat) {
+  if (!selectedCat) {
     el('catGrid').style.outline = '2px solid var(--accent2)';
     setTimeout(() => { el('catGrid').style.outline = ''; }, 1500);
     return;
@@ -1433,7 +1403,7 @@ async function saveTransaction() {
     desc,
     amount,
     date,
-    cat      : currentType === 'pago_tarjeta' ? 'pago_tarjeta' : selectedCat,
+    cat      : selectedCat,
     account  : selectedAccount,
     timestamp: new Date().toISOString(),
   };
@@ -1462,84 +1432,40 @@ function renderAll() {
   renderBudgetPage();
   renderAlerts();
   renderCuentas();
-  if (el('page-graficas').classList.contains('active')) { renderMonthlyBalance(); setTimeout(renderCharts, 100); }
+  if (el('page-graficas').classList.contains('active')) renderCharts();
 }
 
 function txHTML(t, showDelete = true) {
-  const isPay  = t.type === 'pago_tarjeta';
+  const cat    = getCatById(t.cat);
   const isInc  = t.type === 'ingreso';
-  const cat    = isPay ? { emoji:'💳', label:'Pago tarjeta' } : getCatById(t.cat);
   const d      = new Date(t.date + 'T00:00:00');
-  const dateStr = d.toLocaleDateString('es-DO', { day:'2-digit', month:'short' });
+  const dateStr = d.toLocaleDateString('en-US', { day:'2-digit', month:'short' });
   const accE   = ACC_EMOJI[t.account] || '💵';
-  const bgColor = isPay ? 'var(--accent4-dim)' : (isInc ? 'var(--accent-dim)' : 'var(--accent2-dim)');
-  const amtCls  = isPay ? 'pay' : (isInc ? 'inc' : 'exp');
-  const sign    = isInc ? '+' : '−';
   return `<div class="tx-item">
-    <div class="tx-icon" style="background:${bgColor}">${cat.emoji}</div>
+    <div class="tx-icon" style="background:${isInc?'var(--accent-dim)':'var(--accent2-dim)'}">${cat.emoji}</div>
     <div class="tx-info">
       <div class="tx-name">${t.desc}</div>
       <div class="tx-cat">${cat.label} · ${accE} · ${dateStr}</div>
     </div>
     <div class="tx-right">
-      <div class="tx-amount ${amtCls}">${sign}${fmt(t.amount)}</div>
+      <div class="tx-amount ${isInc?'inc':'exp'}">${isInc?'+':'-'}${fmt(t.amount)}</div>
     </div>
     ${showDelete ? `<button class="tx-delete" onclick="deleteTx('${t.id}')">✕</button>` : ''}
   </div>`;
 }
 
-function getWalletBalance() {
-  return txs.reduce((s, t) => {
-    if (t.type === 'ingreso') return s + t.amount;
-    if (t.type === 'egreso' && t.account !== 'tarjeta') return s - t.amount;
-    if (t.type === 'pago_tarjeta') return s - t.amount;
-    return s;
-  }, 0);
-}
-
-function getCardDebt() {
-  return txs.reduce((s, t) => {
-    if (t.type === 'egreso' && t.account === 'tarjeta') return s + t.amount;
-    if (t.type === 'pago_tarjeta') return s - t.amount;
-    return s;
-  }, 0);
-}
-
 function renderBalance() {
-  const wallet = getWalletBalance();
-  const debt   = getCardDebt();
-  const balEl  = el('totalBalance');
-  balEl.textContent = fmt(wallet);
-  balEl.className   = 'balance-amount' + (wallet < 0 ? ' negative' : '');
-  const debtRow = el('cardDebtRow');
-  if (debt > 0) { debtRow.style.display = 'flex'; el('cardDebtAmt').textContent = fmt(debt); }
-  else          { debtRow.style.display = 'none'; }
   const m   = getMonthTxs();
-  const inc = m.filter(t => t.type === 'ingreso').reduce((s, t) => s + t.amount, 0);
-  const exp = m.filter(t => t.type === 'egreso' || t.type === 'pago_tarjeta').reduce((s, t) => s + t.amount, 0);
-  const pct = inc > 0 ? Math.round((exp / inc) * 100) : 0;
-  el('budgetPct').textContent = pct + '% del mes';
-}
-
-function renderMonthlyBalance() {
-  const m   = getMonthTxs();
-  const inc = m.filter(t => t.type === 'ingreso').reduce((s, t) => s + t.amount, 0);
-  const exp = m.filter(t => t.type === 'egreso').reduce((s, t) => s + t.amount, 0);
-  const pay = m.filter(t => t.type === 'pago_tarjeta').reduce((s, t) => s + t.amount, 0);
-  const bal = inc - exp - pay;
-  const balEl = el('monthBal');
+  const inc = m.filter(t => t.type==='ingreso').reduce((s,t) => s+t.amount, 0);
+  const exp = m.filter(t => t.type==='egreso').reduce((s,t)  => s+t.amount, 0);
+  const bal = inc - exp;
+  const balEl = el('totalBalance');
   balEl.textContent = fmt(bal);
   balEl.className   = 'balance-amount' + (bal < 0 ? ' negative' : '');
-  el('monthInc').textContent = fmt(inc);
-  el('monthExp').textContent = fmt(exp + pay);
-  const wallet = getWalletBalance();
-  const debt   = getCardDebt();
-  const net    = wallet - debt;
-  el('netWallet').textContent = fmt(wallet);
-  el('netDebt').textContent   = fmt(debt);
-  const netEl = el('netPos');
-  netEl.textContent = fmt(net);
-  netEl.className   = 'net-card-amt' + (net >= 0 ? ' positive' : ' negative');
+  el('totalInc').textContent = fmt(inc);
+  el('totalExp').textContent = fmt(exp);
+  const pct = inc > 0 ? Math.round((exp / inc) * 100) : 0;
+  el('budgetPct').textContent = pct + '% ' + T.spent;
 }
 
 function renderBudgetBars() {
@@ -1613,13 +1539,8 @@ async function saveBudgets() {
 function renderAlerts() {
   const m       = getMonthTxs();
   const inc     = m.filter(t => t.type==='ingreso').reduce((s,t) => s+t.amount, 0);
-  const exp     = m.filter(t => t.type==='egreso'||t.type==='pago_tarjeta').reduce((s,t) => s+t.amount, 0);
+  const exp     = m.filter(t => t.type==='egreso').reduce((s,t)  => s+t.amount, 0);
   const alerts  = [];
-  const wallet  = getWalletBalance();
-  const debt    = getCardDebt();
-  if (debt > 0 && wallet > 0 && debt >= wallet) alerts.push({ type:'danger', icon:'🚨', title:'Deuda mayor que la cartera', msg:`Debes ${fmt(debt)} y tienes ${fmt(wallet)}. Posición neta: ${fmt(wallet-debt)}.` });
-  else if (debt > 0 && wallet > 0 && debt/wallet >= 0.5) alerts.push({ type:'warn', icon:'💳', title:'Deuda de tarjeta alta', msg:`Debes ${fmt(debt)} — ${((debt/wallet)*100).toFixed(0)}% de tu cartera.` });
-  else if (debt > 0) alerts.push({ type:'ok', icon:'💳', title:'Deuda de tarjeta activa', msg:`Tienes ${fmt(debt)} pendiente en tarjeta.` });
   if (inc > 0) {
     const pct = (exp/inc)*100;
     if (pct >= 100)      alerts.push({ type:'danger', icon:'🚨', title: lang==='es'?'Egresos superaron ingresos':'Expenses exceeded income',   msg:`${fmt(exp-inc)} ${lang==='es'?'de déficit este mes.':'over budget this month.'}` });
