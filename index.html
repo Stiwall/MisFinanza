@@ -392,10 +392,6 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
   <div class="balance-hero">
     <div class="bal-lbl">💼 Cartera</div>
     <div class="bal-amt" id="heroBalance">RD$ 0.00</div>
-    <div id="debtRow" class="debt-row" style="display:none">
-      <span class="debt-lbl">💳 Deuda tarjeta</span>
-      <span class="debt-amt" id="debtAmt">RD$ 0.00</span>
-    </div>
     <div class="bal-stats" style="margin-top:12px">
       <div class="b-stat">
         <div class="b-stat-lbl inc">↑ Ingresos mes</div>
@@ -1105,13 +1101,6 @@ function renderHero() {
   const el = document.getElementById('heroBalance');
   el.textContent = (wallet<0?'-':'') + fmt(Math.abs(wallet));
   el.className = 'bal-amt ' + (wallet>0?'pos':wallet<0?'neg':'zero');
-  const debtRow = document.getElementById('debtRow');
-  if (debt > 0) {
-    debtRow.style.display = 'flex';
-    document.getElementById('debtAmt').textContent = fmt(debt);
-  } else {
-    debtRow.style.display = 'none';
-  }
   const mt = monthTxs();
   const inc = mt.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
   const exp = mt.filter(t=>t.type!=='ingreso').reduce((s,t)=>s+t.amount,0);
@@ -1739,7 +1728,7 @@ function renderDebtWidget() {
   cards.slice(0,2).forEach(c => {
     const prev = prevPeriodDebt(c), used = cardUsed(c), limit = c.limit||1, pct = Math.round(used/limit*100);
     const cls = pct>=100?'util-over':pct>=70?'util-warn':'util-safe';
-    const prevHtml = prev>0 ? `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--red-dim);border:1px solid #ff4d6d30;border-radius:8px;padding:8px 10px;margin-bottom:8px"><div><div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.8px">⚠️ Período anterior</div><div style="font-size:15px;font-weight:700;color:var(--red)">${fmt(prev)}</div></div><button class="d-btn" onclick="openPayCardModal('${c.id}')" style="margin:0;padding:6px 12px;font-size:12px">Pagar</button></div>` : '';
+    const prevHtml = prev>0 ? `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--red-dim);border:1px solid #ff4d6d30;border-radius:8px;padding:8px 10px;margin-bottom:8px"><div><div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.8px">⚠️ Período anterior — ir a Deudas</div><div style="font-size:15px;font-weight:700;color:var(--red)">${fmt(prev)}</div></div></div>` : '';
     html += `<div class="debt-card ${c.color||''}">
       ${prevHtml}
       <div class="debt-hdr">
@@ -1780,7 +1769,8 @@ function renderCardsList() {
     return;
   }
   el.innerHTML = cards.map(c => {
-    const used=cardUsed(c), limit=c.limit||1, pct=Math.round(used/limit*100);
+    const prev=prevPeriodDebt(c), used=cardUsed(c), limit=c.limit||1, pct=Math.round(used/limit*100);
+    const prevBanner = prev>0 ? `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--red-dim);border:1px solid #ff4d6d30;border-radius:8px;padding:10px 12px;margin-bottom:10px"><div><div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.8px">⚠️ Deuda período anterior</div><div style="font-size:16px;font-weight:700;color:var(--red)">${fmt(prev)}</div></div><button class="d-btn primary" onclick="openPayCardModal('${c.id}')" style="margin:0">Pagar</button></div>` : '';
     const avail = Math.max(0, limit-used);
     const cls = pct>=100?'util-over':pct>=70?'util-warn':'util-safe';
     const daysCut = daysUntil(c.cutDay||1), daysDue = daysUntil(c.dueDay||1);
@@ -1790,7 +1780,7 @@ function renderCardsList() {
       ? `<div class="alert-banner alert-warn">⚠️ Usaste más del 70% de tu límite</div>`
       : '';
     return `<div class="debt-card ${c.color||''}">
-      ${alert}
+      ${prevBanner}${alert}
       <div class="debt-hdr">
         <div class="debt-info"><div class="debt-name">💳 ${c.name}</div><div class="debt-sub">${c.bank||''}</div></div>
         <div class="debt-right"><div class="debt-amt">${fmt(used)}</div><div class="debt-amt-lbl">usado</div></div>
