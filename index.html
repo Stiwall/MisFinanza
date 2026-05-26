@@ -639,7 +639,6 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
       <div class="type-toggle">
         <button class="type-btn t-inc" id="btnInc" onclick="setType('ingreso')">↑ Ingreso</button>
         <button class="type-btn" id="btnExp" onclick="setType('gasto')">↓ Gasto</button>
-        <button class="type-btn" id="btnPay" onclick="setType('pago_tarjeta')">💳 Pagar</button>
       </div>
       <div class="field">
         <label>Monto (RD$)</label>
@@ -1084,20 +1083,21 @@ function renderAll() {
 }
 
 function getWalletBalance() {
-  return txs.reduce((s,t) => {
-    if (t.type==='ingreso') return s+t.amount;
-    if (t.type==='gasto' && t.cardId) return s;
-    if (t.type==='gasto' && !t.cardId) return s-t.amount;
-    if (t.type==='pago_tarjeta') return s-t.amount;
-    return s;
-  }, 0);
+  const inc = txs.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
+  const cashExp = txs.filter(t=>t.type==='gasto'&&!t.cardId).reduce((s,t)=>s+t.amount,0);
+  const paid = (cardPayments||[]).reduce((s,p)=>s+p.amount,0);
+  return inc - cashExp - paid;
 }
 function getCardDebt() {
-  return txs.reduce((s,t) => {
-    if (t.type==='gasto' && t.cardId) return s+t.amount;
-    if (t.type==='pago_tarjeta') return s-t.amount;
-    return s;
-  }, 0);
+  const spent = txs.filter(t=>t.type==='gasto'&&t.cardId).reduce((s,t)=>s+t.amount,0);
+  const paid = (cardPayments||[]).reduce((s,p)=>s+p.amount,0);
+  return Math.max(0, spent - paid);
+}
+function prevPeriodDebt(card) {
+  const cycleS = cycleStart(card);
+  const cp = (cardPayments||[]).filter(p=>p.cardId===card.id);
+  let lastPay = cp.length>0 ? new Date(cp.sort((a,b)=>new Date(b.date)-new Date(a.date))[0].date+'T12:00:00') : null;
+  return txs.filter(t=>t.cardId===card.id && new Date(t.date+'T12:00:00') < cycleS && (!lastPay || new Date(t.date+'T12:00:00') > lastPay)).reduce((s,t)=>s+t.amount,0);
 }
 function renderHero() {
   const wallet = getWalletBalance();
@@ -1413,12 +1413,9 @@ function setType(type) {
   currentType = type;
   document.getElementById('btnInc').className = 'type-btn'+(type==='ingreso'?' t-inc':'');
   document.getElementById('btnExp').className  = 'type-btn'+(type==='gasto'?' t-exp':'');
-  document.getElementById('btnPay').className  = 'type-btn'+(type==='pago_tarjeta'?' t-pay':'');
   const cf = document.getElementById('cardField');
   cf.style.display = (type==='gasto' && cards.length > 0) ? 'block' : 'none';
-  const catSection = document.getElementById('catGrid').closest('.field');
-  catSection.style.display = type==='pago_tarjeta' ? 'none' : 'block';
-  if (type !== 'pago_tarjeta') buildCatGrid();
+  buildCatGrid();
 }
 
 function buildCatGrid() {
@@ -1740,12 +1737,14 @@ function renderDebtWidget() {
   sec.style.display = 'block';
   let html = '';
   cards.slice(0,2).forEach(c => {
-    const used = cardUsed(c), limit = c.limit||1, pct = Math.round(used/limit*100);
+    const prev = prevPeriodDebt(c), used = cardUsed(c), limit = c.limit||1, pct = Math.round(used/limit*100);
     const cls = pct>=100?'util-over':pct>=70?'util-warn':'util-safe';
+    const prevHtml = prev>0 ? `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--red-dim);border:1px solid #ff4d6d30;border-radius:8px;padding:8px 10px;margin-bottom:8px"><div><div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.8px">⚠️ Período anterior</div><div style="font-size:15px;font-weight:700;color:var(--red)">${fmt(prev)}</div></div><button class="d-btn" onclick="openPayCardModal('${c.id}')" style="margin:0;padding:6px 12px;font-size:12px">Pagar</button></div>` : '';
     html += `<div class="debt-card ${c.color||''}">
+      ${prevHtml}
       <div class="debt-hdr">
         <div class="debt-info"><div class="debt-name">💳 ${c.name}</div><div class="debt-sub">${c.bank||''}</div></div>
-        <div class="debt-right"><div class="debt-amt">${fmt(used)}</div><div class="debt-amt-lbl">usado de ${fmt(limit)}</div></div>
+        <div class="debt-right"><div class="debt-amt">${fmt(used)}</div><div class="debt-amt-lbl">ciclo actual · lím ${fmt(limit)}</div></div>
       </div>
       <div class="debt-bar">
         <div class="debt-bar-row"><span>Utilizado</span><span class="${cls}">${pct}%</span></div>
@@ -1923,7 +1922,8 @@ function closePayCardModal() { document.getElementById('payCardOverlay').classLi
 function setFullPayment() {
   const cardId = document.getElementById('payCardId').value;
   const c = cards.find(x=>x.id===cardId); if(!c) return;
-  document.getElementById('payCardAmt').value = cardUsed(c).toFixed(2);
+  const total = prevPeriodDebt(c) + cardUsed(c);
+  document.getElementById('payCardAmt').value = total.toFixed(2);
 }
 function setMinPayment() {
   const cardId = document.getElementById('payCardId').value;
