@@ -922,8 +922,6 @@ function doSignOut() {
 
 async function cloudLoad() {
   if (!currentUser) return;
-  const app = document.getElementById('app');
-  if (app) app.style.opacity = '0.6';
   try {
     const doc = await db.collection('users').doc(currentUser.uid).collection('data').doc('main').get();
     if (doc.exists) {
@@ -1040,8 +1038,6 @@ async function initApp() {
   document.getElementById('inpDate').value = now.toISOString().split('T')[0];
   updateMonthLbl();
   await cloudLoad();
-  const app = document.getElementById('app');
-  if (app) app.style.opacity = '1';
   renderAll();
   if (!settings.onboarded) {
     document.getElementById('onboardScreen').classList.remove('hidden');
@@ -1078,15 +1074,9 @@ function catOf(id) {
 
 // ── RENDER ────────────────────────────────────
 function renderAll() {
-  const pg = document.querySelector('.page.active')?.id || 'pageInicio';
-  renderHero();
-  if (pg === 'pageInicio') { renderRecent(); renderDebtWidget(); return; }
-  if (pg === 'pageTx') { renderTxList(); return; }
-  if (pg === 'pagePresupuesto') { renderRegla(); renderBudgets(); return; }
-  if (pg === 'pageAnalisis') { renderAnalisis(); return; }
-  if (pg === 'pageDeudas') { renderDebtPage(); return; }
-  if (pg === 'pageAjustes') return;
-  renderRecent(); renderDebtWidget(); renderTxList(); renderRegla(); renderBudgets(); renderDebtPage();
+  renderHero(); renderRecent(); renderTxList(); renderRegla(); renderBudgets();
+  renderDebtWidget(); renderDebtPage();
+  if (document.getElementById('pageAnalisis').classList.contains('active')) renderAnalisis();
 }
 
 function getWalletBalance() {
@@ -1620,6 +1610,7 @@ function showPage(id) {
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const nid = NAV_MAP[id]; if(nid) document.getElementById(nid).classList.add('active');
   renderAll();
+  if(id==='pageAnalisis') renderAnalisis();
   if(id==='pageAjustes') loadTelegramStatus();
 }
 
