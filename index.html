@@ -172,6 +172,15 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
 .type-btn{flex:1;padding:10px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;color:var(--text-muted);background:none}
 .type-btn.t-inc{background:var(--green-dim);color:var(--green);border:1px solid var(--green)}
 .type-btn.t-exp{background:var(--red-dim);color:var(--red);border:1px solid var(--red)}
+.type-btn.t-pay{background:#7c5cfc20;color:var(--accent);border:1px solid var(--accent)}
+.debt-row{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding:8px 12px;background:var(--red-dim);border:1px solid #ff4d6d30;border-radius:var(--radius-xs)}
+.debt-lbl{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--red)}
+.debt-amt{font-size:15px;font-weight:700;color:var(--red)}
+.net-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.net-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xs);padding:10px;text-align:center}
+.net-card-lbl{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px}
+.net-card-val{font-size:14px;font-weight:700}
+.net-card-val.pos{color:var(--green)}.net-card-val.neg{color:var(--red)}
 .field{margin-bottom:16px}
 .field label{display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
 .field input,.field select{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:15px;font-family:'Inter',sans-serif;outline:none;transition:border-color .15s;-webkit-appearance:none}
@@ -381,15 +390,19 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
     <button onclick="installPWA()">Instalar</button>
   </div>
   <div class="balance-hero">
-    <div class="bal-lbl">Balance del mes</div>
+    <div class="bal-lbl">💼 Cartera</div>
     <div class="bal-amt" id="heroBalance">RD$ 0.00</div>
-    <div class="bal-stats">
+    <div id="debtRow" class="debt-row" style="display:none">
+      <span class="debt-lbl">💳 Deuda tarjeta</span>
+      <span class="debt-amt" id="debtAmt">RD$ 0.00</span>
+    </div>
+    <div class="bal-stats" style="margin-top:12px">
       <div class="b-stat">
-        <div class="b-stat-lbl inc">↑ Ingresos</div>
+        <div class="b-stat-lbl inc">↑ Ingresos mes</div>
         <div class="b-stat-val" id="heroInc">RD$ 0.00</div>
       </div>
       <div class="b-stat">
-        <div class="b-stat-lbl exp">↓ Egresos</div>
+        <div class="b-stat-lbl exp">↓ Egresos mes</div>
         <div class="b-stat-val" id="heroExp">RD$ 0.00</div>
       </div>
     </div>
@@ -438,6 +451,11 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
 
 <!-- ANÁLISIS -->
 <div class="page" id="pageAnalisis">
+  <div class="net-grid">
+    <div class="net-card"><div class="net-card-lbl">💼 Cartera</div><div class="net-card-val" id="netWallet">0.00</div></div>
+    <div class="net-card"><div class="net-card-lbl">💳 Deuda</div><div class="net-card-val neg" id="netDebt">0.00</div></div>
+    <div class="net-card"><div class="net-card-lbl">⚖️ Neto</div><div class="net-card-val" id="netPos">0.00</div></div>
+  </div>
   <div class="kpi-row" id="kpiRow"></div>
   <div class="chart-card" id="tendenciasCard">
     <div class="chart-title">Resumen vs mes anterior</div>
@@ -621,6 +639,7 @@ body::before{content:'';position:fixed;top:-80px;left:50%;transform:translateX(-
       <div class="type-toggle">
         <button class="type-btn t-inc" id="btnInc" onclick="setType('ingreso')">↑ Ingreso</button>
         <button class="type-btn" id="btnExp" onclick="setType('gasto')">↓ Gasto</button>
+        <button class="type-btn" id="btnPay" onclick="setType('pago_tarjeta')">💳 Pagar</button>
       </div>
       <div class="field">
         <label>Monto (RD$)</label>
@@ -1064,29 +1083,56 @@ function renderAll() {
   if (document.getElementById('pageAnalisis').classList.contains('active')) renderAnalisis();
 }
 
+function getWalletBalance() {
+  return txs.reduce((s,t) => {
+    if (t.type==='ingreso') return s+t.amount;
+    if (t.type==='gasto' && t.cardId) return s;
+    if (t.type==='gasto' && !t.cardId) return s-t.amount;
+    if (t.type==='pago_tarjeta') return s-t.amount;
+    return s;
+  }, 0);
+}
+function getCardDebt() {
+  return txs.reduce((s,t) => {
+    if (t.type==='gasto' && t.cardId) return s+t.amount;
+    if (t.type==='pago_tarjeta') return s-t.amount;
+    return s;
+  }, 0);
+}
 function renderHero() {
+  const wallet = getWalletBalance();
+  const debt = getCardDebt();
+  const el = document.getElementById('heroBalance');
+  el.textContent = (wallet<0?'-':'') + fmt(Math.abs(wallet));
+  el.className = 'bal-amt ' + (wallet>0?'pos':wallet<0?'neg':'zero');
+  const debtRow = document.getElementById('debtRow');
+  if (debt > 0) {
+    debtRow.style.display = 'flex';
+    document.getElementById('debtAmt').textContent = fmt(debt);
+  } else {
+    debtRow.style.display = 'none';
+  }
   const mt = monthTxs();
   const inc = mt.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
-  const exp = mt.filter(t=>t.type==='gasto').reduce((s,t)=>s+t.amount,0);
-  const bal = inc - exp;
-  const el = document.getElementById('heroBalance');
-  el.textContent = (bal<0?'-':'') + fmt(bal);
-  el.className = 'bal-amt ' + (bal>0?'pos':bal<0?'neg':'zero');
+  const exp = mt.filter(t=>t.type!=='ingreso').reduce((s,t)=>s+t.amount,0);
   document.getElementById('heroInc').textContent = fmt(inc);
   document.getElementById('heroExp').textContent = fmt(exp);
 }
 
 function txRow(t) {
-  const cat = catOf(t.catId);
+  const isPay = t.type==='pago_tarjeta';
+  const cat = isPay ? {e:'💳',n:'Pago tarjeta'} : catOf(t.catId);
   const d = new Date(t.date+'T12:00:00');
   const ds = d.toLocaleDateString('es-DO',{day:'numeric',month:'short'});
+  const amtClass = t.type==='ingreso' ? 'inc' : (isPay ? '' : 'exp');
+  const amtSign = t.type==='ingreso' ? '+' : '-';
   return `<div class="tx-item">
     <div class="tx-icon ${t.type==='ingreso'?'inc':'exp'}">${cat.e}</div>
     <div class="tx-body" style="flex:1;min-width:0">
       <div class="tx-name">${t.desc||cat.n}</div>
       <div class="tx-meta">
         <span>${cat.n} · ${ds}</span>
-        <span class="tx-amt ${t.type==='ingreso'?'inc':'exp'}">${t.type==='ingreso'?'+':'-'}${fmt(t.amount)}</span>
+        <span class="tx-amt ${amtClass}">${amtSign}${fmt(t.amount)}</span>
       </div>
     </div>
     <div class="tx-actions">
@@ -1119,7 +1165,17 @@ function setFilter(type, btn) {
 }
 
 // ── ANÁLISIS ──────────────────────────────────
-function renderAnalisis() { renderKPIs(); renderTendencias(); renderDonut(); renderTopCats(); renderBars(); }
+function renderNetPosition() {
+  const wallet = getWalletBalance();
+  const debt = getCardDebt();
+  const net = wallet - debt;
+  document.getElementById('netWallet').textContent = fmt(Math.abs(wallet));
+  document.getElementById('netWallet').className = 'net-card-val ' + (wallet>=0?'pos':'neg');
+  document.getElementById('netDebt').textContent = fmt(debt);
+  document.getElementById('netPos').textContent = fmt(Math.abs(net));
+  document.getElementById('netPos').className = 'net-card-val ' + (net>=0?'pos':'neg');
+}
+function renderAnalisis() { renderNetPosition(); renderKPIs(); renderTendencias(); renderDonut(); renderTopCats(); renderBars(); }
 
 function prevMonthTxs() {
   let m = viewM-1, y = viewY;
@@ -1357,9 +1413,12 @@ function setType(type) {
   currentType = type;
   document.getElementById('btnInc').className = 'type-btn'+(type==='ingreso'?' t-inc':'');
   document.getElementById('btnExp').className  = 'type-btn'+(type==='gasto'?' t-exp':'');
+  document.getElementById('btnPay').className  = 'type-btn'+(type==='pago_tarjeta'?' t-pay':'');
   const cf = document.getElementById('cardField');
   cf.style.display = (type==='gasto' && cards.length > 0) ? 'block' : 'none';
-  buildCatGrid();
+  const catSection = document.getElementById('catGrid').closest('.field');
+  catSection.style.display = type==='pago_tarjeta' ? 'none' : 'block';
+  if (type !== 'pago_tarjeta') buildCatGrid();
 }
 
 function buildCatGrid() {
@@ -1384,13 +1443,15 @@ function saveTx() {
   const date = document.getElementById('inpDate').value;
   if (!amt||amt<=0) { toast('Ingresa un monto válido','err'); return; }
   if (!date)        { toast('Selecciona una fecha','err'); return; }
+  const isPay = currentType==='pago_tarjeta';
   const cardId = currentType==='gasto' ? (document.getElementById('inpCard').value||null) : null;
+  const catId = isPay ? 'deuda' : selectedCat;
   if (editId) {
     const idx = txs.findIndex(t=>t.id===editId);
-    if (idx>=0) txs[idx]={...txs[idx],type:currentType,amount:amt,desc,catId:selectedCat,date,cardId};
+    if (idx>=0) txs[idx]={...txs[idx],type:currentType,amount:amt,desc,catId,date,cardId};
     toast('Movimiento actualizado');
   } else {
-    txs.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),type:currentType,amount:amt,desc,catId:selectedCat,date,cardId});
+    txs.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),type:currentType,amount:amt,desc,catId,date,cardId});
     toast('Guardado ✓','ok');
     document.getElementById('fabHint').classList.add('hidden');
   }
